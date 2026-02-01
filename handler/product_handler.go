@@ -18,6 +18,12 @@ func NewProductHandler(service *service.ProductService) *ProductHandler {
 }
 
 func (h *ProductHandler) RootHandler(w http.ResponseWriter, r *http.Request) {
+	// Jika path-nya BUKAN tepat "/" (misal /product), jangan eksekusi ini
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,

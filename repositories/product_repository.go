@@ -2,18 +2,19 @@ package repositories
 
 import (
 	"api-pos/model"
-	"context"
 	"errors"
 
+	"database/sql"
+
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type ProductRepository struct {
-	db *pgxpool.Pool
+	// db *pgxpool.Pool
+	db *sql.DB
 }
 
-func NewProductRepository(db *pgxpool.Pool) *ProductRepository {
+func NewProductRepository(db *sql.DB) *ProductRepository {
 	return &ProductRepository{db: db}
 }
 
@@ -21,7 +22,7 @@ func NewProductRepository(db *pgxpool.Pool) *ProductRepository {
 func (r *ProductRepository) GetAll() ([]model.Product, error) {
 	query := `SELECT p.id, p.name, p.price, p.stock, p.category_id, COALESCE(c.name, '') AS category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id`
 
-	rows, err := r.db.Query(context.Background(), query)
+	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +50,7 @@ func (r *ProductRepository) GetByID(id int) (*model.Product, error) {
 	query := `SELECT p.id, p.name, p.price, p.stock, p.category_id,COALESCE(c.name, 'No Category') as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id = $1`
 
 	var product model.Product
-	err := r.db.QueryRow(context.Background(), query, id).Scan(
+	err := r.db.QueryRow(query, id).Scan(
 		&product.ID,
 		&product.Name,
 		&product.Price,
@@ -76,7 +77,7 @@ func (r *ProductRepository) Create(product model.Product) (*model.Product, error
         RETURNING id, (SELECT name FROM categories WHERE id = $4)
     `
 
-	err := r.db.QueryRow(context.Background(), query, product.Name, product.Price, product.Stock, product.Category_ID).Scan(&product.ID, &product.Category_Name)
+	err := r.db.QueryRow(query, product.Name, product.Price, product.Stock, product.Category_ID).Scan(&product.ID, &product.Category_Name)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +94,7 @@ func (r *ProductRepository) Update(id int, product model.Product) (*model.Produc
 		RETURNING id, name, price, stock, category_id, (SELECT name from categories WHERE id = $4)
     `
 
-	err := r.db.QueryRow(context.Background(), query, product.Name, product.Price, product.Stock, product.Category_ID, id).Scan(&product.ID, &product.Name, &product.Price, &product.Stock, &product.Category_ID, &product.Category_Name)
+	err := r.db.QueryRow(query, product.Name, product.Price, product.Stock, product.Category_ID, id).Scan(&product.ID, &product.Name, &product.Price, &product.Stock, &product.Category_ID, &product.Category_Name)
 	if err != nil {
 		return nil, err
 	}
@@ -113,12 +114,13 @@ func (r *ProductRepository) Update(id int, product model.Product) (*model.Produc
 func (r *ProductRepository) Delete(id int) error {
 	query := `DELETE FROM products WHERE id = $1`
 
-	commandTag, err := r.db.Exec(context.Background(), query, id)
+	commandTag, err := r.db.Exec(query, id)
 	if err != nil {
 		return err
 	}
+	rows, err := commandTag.RowsAffected()
 
-	if commandTag.RowsAffected() == 0 {
+	if rows == 0 {
 		return errors.New("product not found")
 	}
 

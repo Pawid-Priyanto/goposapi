@@ -47,12 +47,18 @@ func main() {
 	categoryRepo := repositories.NewCategoryRepository(db)
 	categoryService := service.NewCategoryService(categoryRepo)
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
+	transactionRepo := repositories.NewTransactionRepository(db)
+	transactionService := service.NewTransactionService(transactionRepo)
+	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
 	http.HandleFunc("/", productHandler.RootHandler)
 	http.HandleFunc("/product", productHandler.ProductHandler)
 	http.HandleFunc("/product/", productHandler.ProductByIDHandler)
 	http.HandleFunc("/category", categoryHandler.CategoryHandler)
 	http.HandleFunc("/category/", categoryHandler.CategoryByIDHandler)
+	http.HandleFunc("/checkout/", transactionHandler.HandleCheckout)
+	http.HandleFunc("/report", transactionHandler.GetReport)
+	http.HandleFunc("/report/today", transactionHandler.GetReport)
 
 	fmt.Printf("Server running on port %s\n", config.Port)
 
